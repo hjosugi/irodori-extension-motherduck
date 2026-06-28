@@ -57,7 +57,9 @@ fn buffer_to_string(buffer: IrodoriConnectorBuffer) -> Result<String, ()> {
         };
     }
     let bytes = unsafe { std::slice::from_raw_parts(buffer.ptr, buffer.len) };
-    std::str::from_utf8(bytes).map(str::to_owned).map_err(|_| ())
+    std::str::from_utf8(bytes)
+        .map(str::to_owned)
+        .map_err(|_| ())
 }
 
 fn ok(mut payload: serde_json::Map<String, Value>) -> IrodoriConnectorBuffer {
@@ -86,12 +88,14 @@ fn parse_request(buffer: IrodoriConnectorBuffer) -> Result<Option<Value>, Irodor
     if trimmed.is_empty() {
         return Ok(None);
     }
-    serde_json::from_str::<Value>(trimmed).map(Some).map_err(|err| {
-        error(
-            "connector.invalidJson",
-            format!("Connector request must be valid JSON: {err}"),
-        )
-    })
+    serde_json::from_str::<Value>(trimmed)
+        .map(Some)
+        .map_err(|err| {
+            error(
+                "connector.invalidJson",
+                format!("Connector request must be valid JSON: {err}"),
+            )
+        })
 }
 
 fn request_method(request: Option<&Value>) -> Result<&str, IrodoriConnectorBuffer> {
@@ -101,12 +105,20 @@ fn request_method(request: Option<&Value>) -> Result<&str, IrodoriConnectorBuffe
             .get("method")
             .and_then(Value::as_str)
             .filter(|method| !method.trim().is_empty())
-            .ok_or_else(|| error("connector.invalidRequest", "Connector request needs a string method.")),
+            .ok_or_else(|| {
+                error(
+                    "connector.invalidRequest",
+                    "Connector request needs a string method.",
+                )
+            }),
     }
 }
 
 fn string_field<'a>(value: &'a Value, field: &str) -> Option<&'a str> {
-    value.get(field).and_then(Value::as_str).filter(|text| !text.trim().is_empty())
+    value
+        .get(field)
+        .and_then(Value::as_str)
+        .filter(|text| !text.trim().is_empty())
 }
 
 fn profile_field<'a>(request: &'a Value, field: &str) -> Option<&'a str> {
@@ -122,7 +134,11 @@ fn connection_id(request: Option<&Value>) -> String {
         .and_then(|value| {
             string_field(value, "connectionId")
                 .or_else(|| string_field(value, "id"))
-                .or_else(|| value.get("profile").and_then(|profile| string_field(profile, "id")))
+                .or_else(|| {
+                    value
+                        .get("profile")
+                        .and_then(|profile| string_field(profile, "id"))
+                })
         })
         .unwrap_or("default")
         .trim()
@@ -141,13 +157,9 @@ fn max_rows(request: &Value) -> usize {
 fn connect(request: &Value) -> IrodoriConnectorBuffer {
     let connection_id = connection_id(Some(request));
     let database = profile_field(request, "database").or_else(|| profile_field(request, "url"));
-    let conn = if ENGINE == "motherduck" {
-        duckdb::Connection::open_in_memory()
-    } else {
-        match database.map(str::trim) {
-            None | Some("") | Some(":memory:") => duckdb::Connection::open_in_memory(),
-            Some(path) => duckdb::Connection::open(path),
-        }
+    let conn = match database.map(str::trim) {
+        None | Some("") | Some(":memory:") => duckdb::Connection::open_in_memory(),
+        Some(path) => duckdb::Connection::open(path),
     };
     let conn = match conn {
         Ok(conn) => conn,
@@ -161,7 +173,12 @@ fn connect(request: &Value) -> IrodoriConnectorBuffer {
     }
     let mut guard = match connections().lock() {
         Ok(guard) => guard,
-        Err(_) => return error("connector.statePoisoned", "Connector connection state is poisoned."),
+        Err(_) => {
+            return error(
+                "connector.statePoisoned",
+                "Connector connection state is poisoned.",
+            )
+        }
     };
     guard.insert(connection_id.clone(), conn);
     ok(serde_json::Map::from_iter([
@@ -175,11 +192,19 @@ fn connect(request: &Value) -> IrodoriConnectorBuffer {
 fn query(request: &Value) -> IrodoriConnectorBuffer {
     let connection_id = connection_id(Some(request));
     let Some(sql) = string_field(request, "sql") else {
-        return error("connector.invalidRequest", "query requires a string sql field.");
+        return error(
+            "connector.invalidRequest",
+            "query requires a string sql field.",
+        );
     };
     let mut guard = match connections().lock() {
         Ok(guard) => guard,
-        Err(_) => return error("connector.statePoisoned", "Connector connection state is poisoned."),
+        Err(_) => {
+            return error(
+                "connector.statePoisoned",
+                "Connector connection state is poisoned.",
+            )
+        }
     };
     let Some(conn) = guard.get_mut(&connection_id) else {
         return error(
@@ -190,7 +215,10 @@ fn query(request: &Value) -> IrodoriConnectorBuffer {
     match run_query(conn, sql, max_rows(request)) {
         Ok((columns, rows, truncated)) => ok(serde_json::Map::from_iter([
             ("connectionId".to_string(), Value::String(connection_id)),
-            ("columns".to_string(), Value::Array(columns.into_iter().map(Value::String).collect())),
+            (
+                "columns".to_string(),
+                Value::Array(columns.into_iter().map(Value::String).collect()),
+            ),
             (
                 "rows".to_string(),
                 Value::Array(
@@ -209,7 +237,12 @@ fn metadata(request: &Value) -> IrodoriConnectorBuffer {
     let connection_id = connection_id(Some(request));
     let mut guard = match connections().lock() {
         Ok(guard) => guard,
-        Err(_) => return error("connector.statePoisoned", "Connector connection state is poisoned."),
+        Err(_) => {
+            return error(
+                "connector.statePoisoned",
+                "Connector connection state is poisoned.",
+            )
+        }
     };
     let Some(conn) = guard.get_mut(&connection_id) else {
         return error(
@@ -230,7 +263,12 @@ fn close(request: &Value) -> IrodoriConnectorBuffer {
     let connection_id = connection_id(Some(request));
     let mut guard = match connections().lock() {
         Ok(guard) => guard,
-        Err(_) => return error("connector.statePoisoned", "Connector connection state is poisoned."),
+        Err(_) => {
+            return error(
+                "connector.statePoisoned",
+                "Connector connection state is poisoned.",
+            )
+        }
     };
     let existed = guard.remove(&connection_id).is_some();
     ok(serde_json::Map::from_iter([
@@ -240,24 +278,32 @@ fn close(request: &Value) -> IrodoriConnectorBuffer {
 }
 
 fn duckdb_version(conn: &duckdb::Connection) -> Option<String> {
-    conn.query_row("select version()", [], |row| row.get::<_, String>(0)).ok()
+    conn.query_row("select version()", [], |row| row.get::<_, String>(0))
+        .ok()
 }
 
 fn should_seed_sample(request: &Value, connection_id: &str) -> bool {
     request
         .get("seedSample")
-        .or_else(|| request.get("profile").and_then(|profile| profile.get("seedSample")))
+        .or_else(|| {
+            request
+                .get("profile")
+                .and_then(|profile| profile.get("seedSample"))
+        })
         .and_then(Value::as_bool)
-        .unwrap_or(matches!(connection_id, "duckdb-memory" | "motherduck-memory"))
+        .unwrap_or(matches!(
+            connection_id,
+            "duckdb-memory" | "motherduck-memory"
+        ))
 }
 
 fn seed_sample(conn: &duckdb::Connection) -> Result<(), String> {
-    conn.execute_batch(
-        "create table if not exists customers (id integer, name varchar);",
-    )
-    .map_err(|err| format!("duckdb sample schema failed: {err}"))?;
+    conn.execute_batch("create table if not exists customers (id integer, name varchar);")
+        .map_err(|err| format!("duckdb sample schema failed: {err}"))?;
     let existing = conn
-        .query_row("select count(*) from customers", [], |row| row.get::<_, i64>(0))
+        .query_row("select count(*) from customers", [], |row| {
+            row.get::<_, i64>(0)
+        })
         .unwrap_or(0);
     if existing == 0 {
         conn.execute_batch("insert into customers values (1, 'Kawase Foods'), (2, 'Minato Labs');")
@@ -286,20 +332,33 @@ fn run_query(
     let mut stmt = conn
         .prepare(sql)
         .map_err(|err| format!("query failed: {err}"))?;
-    let mut duck_rows = stmt.query([]).map_err(|err| format!("query failed: {err}"))?;
+    let mut duck_rows = stmt
+        .query([])
+        .map_err(|err| format!("query failed: {err}"))?;
     let columns: Vec<String> = match duck_rows.as_ref() {
-        Some(stmt) => stmt.column_names().iter().map(|column| column.to_string()).collect(),
+        Some(stmt) => stmt
+            .column_names()
+            .iter()
+            .map(|column| column.to_string())
+            .collect(),
         None => Vec::new(),
     };
     let column_count = columns.len();
     let mut rows = Vec::new();
     let mut truncated = false;
-    while let Some(row) = duck_rows.next().map_err(|err| format!("query failed: {err}"))? {
+    while let Some(row) = duck_rows
+        .next()
+        .map_err(|err| format!("query failed: {err}"))?
+    {
         if rows.len() >= cap {
             truncated = true;
             break;
         }
-        rows.push((0..column_count).map(|index| cell_to_json(row, index)).collect());
+        rows.push(
+            (0..column_count)
+                .map(|index| cell_to_json(row, index))
+                .collect(),
+        );
     }
     Ok((columns, rows, truncated))
 }
@@ -321,8 +380,13 @@ fn load_metadata(conn: &duckdb::Connection) -> Result<Value, String> {
         })
         .map_err(|err| format!("metadata objects failed: {err}"))?;
     for row in rows {
-        let (schema, name, table_type) = row.map_err(|err| format!("metadata objects failed: {err}"))?;
-        let kind = if table_type.eq_ignore_ascii_case("VIEW") { "view" } else { "table" };
+        let (schema, name, table_type) =
+            row.map_err(|err| format!("metadata objects failed: {err}"))?;
+        let kind = if table_type.eq_ignore_ascii_case("VIEW") {
+            "view"
+        } else {
+            "table"
+        };
         objects.insert(
             (schema.clone(), name.clone()),
             ObjectMeta {
@@ -366,12 +430,15 @@ fn load_metadata(conn: &duckdb::Connection) -> Result<Value, String> {
 
     let mut schemas: BTreeMap<String, Vec<Value>> = BTreeMap::new();
     for object in objects.into_values() {
-        schemas.entry(object.schema.clone()).or_default().push(json!({
-            "schema": object.schema,
-            "name": object.name,
-            "kind": object.kind,
-            "columns": object.columns
-        }));
+        schemas
+            .entry(object.schema.clone())
+            .or_default()
+            .push(json!({
+                "schema": object.schema,
+                "name": object.name,
+                "kind": object.kind,
+                "columns": object.columns
+            }));
     }
     Ok(json!({
         "schemas": schemas
@@ -453,8 +520,14 @@ pub extern "C" fn irodori_connector_call_json(
             ("engine".to_string(), Value::String(ENGINE.to_string())),
             ("abiVersion".to_string(), json!(ABI_VERSION)),
             ("driverLinked".to_string(), Value::Bool(true)),
-            ("manifest".to_string(), serde_json::from_str(MANIFEST_JSON).unwrap_or(Value::Null)),
-            ("config".to_string(), serde_json::from_str(CONFIG_JSON).unwrap_or(Value::Null)),
+            (
+                "manifest".to_string(),
+                serde_json::from_str(MANIFEST_JSON).unwrap_or(Value::Null),
+            ),
+            (
+                "config".to_string(),
+                serde_json::from_str(CONFIG_JSON).unwrap_or(Value::Null),
+            ),
         ])),
         "manifest" => owned_buffer(MANIFEST_JSON.to_string()),
         "config" => owned_buffer(CONFIG_JSON.to_string()),
@@ -462,7 +535,10 @@ pub extern "C" fn irodori_connector_call_json(
         "query" => query(request.as_ref().expect("query has request")),
         "metadata" => metadata(request.as_ref().expect("metadata has request")),
         "close" => close(request.as_ref().expect("close has request")),
-        other => error("connector.unknownMethod", format!("unknown connector method: {other}")),
+        other => error(
+            "connector.unknownMethod",
+            format!("unknown connector method: {other}"),
+        ),
     }
 }
 
@@ -540,7 +616,10 @@ mod tests {
 
         let describe = call(r#"{"method":"describe"}"#);
         assert_eq!(describe["ok"], true);
-        assert_eq!(describe["manifest"]["id"], describe["config"]["extensionId"]);
+        assert_eq!(
+            describe["manifest"]["id"],
+            describe["config"]["extensionId"]
+        );
         assert_eq!(describe["config"]["connector"]["engine"], ENGINE);
     }
 
@@ -551,14 +630,20 @@ mod tests {
         assert_eq!(connected["driverLinked"], true);
 
         assert_eq!(
-            call(r#"{"method":"query","connectionId":"test","sql":"create table numbers (n integer, label varchar)"}"#)["ok"],
+            call(
+                r#"{"method":"query","connectionId":"test","sql":"create table numbers (n integer, label varchar)"}"#
+            )["ok"],
             true
         );
         assert_eq!(
-            call(r#"{"method":"query","connectionId":"test","sql":"insert into numbers values (1, 'one'), (2, 'two')"}"#)["ok"],
+            call(
+                r#"{"method":"query","connectionId":"test","sql":"insert into numbers values (1, 'one'), (2, 'two')"}"#
+            )["ok"],
             true
         );
-        let result = call(r#"{"method":"query","connectionId":"test","sql":"select n, label from numbers order by n","maxRows":10}"#);
+        let result = call(
+            r#"{"method":"query","connectionId":"test","sql":"select n, label from numbers order by n","maxRows":10}"#,
+        );
         assert_eq!(result["ok"], true);
         assert_eq!(result["columns"], json!(["n", "label"]));
         assert_eq!(result["rows"], json!([[1, "one"], [2, "two"]]));
@@ -572,7 +657,10 @@ mod tests {
             .iter()
             .any(|object| object["name"] == "numbers")));
 
-        assert_eq!(call(r#"{"method":"close","connectionId":"test"}"#)["closed"], true);
+        assert_eq!(
+            call(r#"{"method":"close","connectionId":"test"}"#)["closed"],
+            true
+        );
         let missing = call(r#"{"method":"query","connectionId":"test","sql":"select 1"}"#);
         assert_eq!(missing["ok"], false);
         assert_eq!(missing["error"]["code"], "connector.connectionNotFound");
@@ -581,7 +669,9 @@ mod tests {
     #[test]
     fn query_reports_driver_errors() {
         let _ = call(r#"{"method":"connect","connectionId":"errors","database":":memory:"}"#);
-        let response = call(r#"{"method":"query","connectionId":"errors","sql":"select * from missing_table"}"#);
+        let response = call(
+            r#"{"method":"query","connectionId":"errors","sql":"select * from missing_table"}"#,
+        );
         assert_eq!(response["ok"], false);
         assert_eq!(response["error"]["code"], "connector.queryFailed");
     }
