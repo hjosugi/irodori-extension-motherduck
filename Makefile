@@ -8,22 +8,20 @@ export CARGO_BUILD_JOBS
 
 check: fmt lint test
 
-check-duckdb-bundled: fmt
-	$(CARGO) clippy --all-targets --features bundled-duckdb -- -D warnings
-	$(CARGO) test --features bundled-duckdb
+check-duckdb-bundled: check
 
 
 fmt:
 	$(CARGO) fmt --check
 
 lint:
-	$(CARGO) clippy --all-targets --no-default-features -- -D warnings
+	$(CARGO) clippy --all-targets --features bundled-duckdb -- -D warnings
 
 build:
 	$(CARGO) build --release
 
 test:
-	$(CARGO) check --tests --no-default-features
+	$(CARGO) test --features bundled-duckdb
 
 package: build
 	mkdir -p dist/native
