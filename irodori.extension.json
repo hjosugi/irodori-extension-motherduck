@@ -1,0 +1,311 @@
+{
+  "$schema": "https://irodori.dev/schemas/irodori.extension.schema.json",
+  "manifestVersion": 1,
+  "id": "irodori.motherduck",
+  "name": "MotherDuck Connector",
+  "version": "0.1.0",
+  "publisher": "irodori",
+  "description": "MotherDuck Connector contributes the MotherDuck database connector through the native connector ABI.",
+  "license": "MIT OR 0BSD",
+  "repository": "https://github.com/hjosugi/irodori-extension-motherduck",
+  "apiVersion": "0.1",
+  "runtime": "native",
+  "entry": "dist/native",
+  "permissions": [
+    "connections:read",
+    "connections:write",
+    "queries:run",
+    "metadata:read",
+    "native",
+    "connectors"
+  ],
+  "contributes": {
+    "connectors": [
+      {
+        "id": "motherduck.connector",
+        "engine": "motherduck",
+        "label": "MotherDuck",
+        "aliases": [
+          "motherduck",
+          "MotherDuck"
+        ],
+        "defaultPort": 443,
+        "wire": "duckdb",
+        "module": "motherduck.driver",
+        "features": [
+          "metadata",
+          "sql",
+          "streaming",
+          "explain"
+        ],
+        "connection": {
+          "schemaVersion": 1,
+          "inferEnvironmentFrom": [
+            "name",
+            "id",
+            "host",
+            "database",
+            "url"
+          ],
+          "compatibility": {
+            "addsRequiredProfileFields": false,
+            "acceptsExistingProfiles": true
+          },
+          "defaults": {
+            "engine": "motherduck",
+            "wire": "duckdb",
+            "port": 443,
+            "readOnly": false
+          },
+          "endpoint": {
+            "modes": [
+              "motherduckService",
+              "localFile",
+              "inMemory",
+              "connectionString"
+            ],
+            "defaultPort": 443,
+            "fields": [
+              {
+                "id": "database",
+                "label": "MotherDuck database or DuckDB file",
+                "type": "string",
+                "profileField": "database"
+              },
+              {
+                "id": "host",
+                "label": "MotherDuck endpoint",
+                "type": "string",
+                "profileField": "host",
+                "default": "api.motherduck.com"
+              }
+            ]
+          },
+          "profileFields": [
+            {
+              "id": "id",
+              "label": "Connection ID",
+              "type": "string",
+              "profileField": "id",
+              "required": true
+            },
+            {
+              "id": "url",
+              "label": "Connection URL or DSN",
+              "type": "uri",
+              "profileField": "url"
+            },
+            {
+              "id": "user",
+              "label": "User",
+              "type": "string",
+              "profileField": "user"
+            },
+            {
+              "id": "database",
+              "label": "MotherDuck database or DuckDB file",
+              "type": "string",
+              "profileField": "database"
+            },
+            {
+              "id": "host",
+              "label": "MotherDuck endpoint",
+              "type": "string",
+              "profileField": "host",
+              "default": "api.motherduck.com"
+            },
+            {
+              "id": "readOnly",
+              "label": "Read-only connection",
+              "type": "boolean",
+              "profileField": "readOnly",
+              "default": false
+            },
+            {
+              "id": "options",
+              "label": "Driver options",
+              "type": "map",
+              "profileField": "options"
+            }
+          ],
+          "authMethods": [
+            {
+              "id": "none",
+              "label": "No authentication",
+              "kind": "none",
+              "secretPurposes": [],
+              "fields": []
+            },
+            {
+              "id": "connectionString",
+              "label": "Connection string / DSN",
+              "kind": "connectionString",
+              "secretPurposes": [],
+              "fields": [
+                {
+                  "id": "url",
+                  "label": "Connection URL or DSN",
+                  "type": "uri",
+                  "profileField": "url",
+                  "required": true
+                }
+              ]
+            },
+            {
+              "id": "motherduckToken",
+              "label": "MotherDuck token",
+              "kind": "token",
+              "secretPurposes": [
+                "token"
+              ],
+              "fields": [
+                {
+                  "id": "token",
+                  "label": "Token",
+                  "type": "secret",
+                  "secretPurpose": "token"
+                }
+              ]
+            },
+            {
+              "id": "oauth2",
+              "label": "OAuth 2.0",
+              "kind": "oauth2",
+              "secretPurposes": [
+                "token"
+              ],
+              "fields": [
+                {
+                  "id": "accessToken",
+                  "label": "Access token",
+                  "type": "secret",
+                  "secretPurpose": "token"
+                },
+                {
+                  "id": "refreshToken",
+                  "label": "Refresh token",
+                  "type": "secret",
+                  "secretPurpose": "token"
+                },
+                {
+                  "id": "clientId",
+                  "label": "Client ID",
+                  "type": "string"
+                },
+                {
+                  "id": "clientSecret",
+                  "label": "Client secret",
+                  "type": "secret",
+                  "secretPurpose": "token"
+                }
+              ]
+            },
+            {
+              "id": "browserSso",
+              "label": "Browser SSO",
+              "kind": "browserSso",
+              "secretPurposes": [
+                "token"
+              ],
+              "fields": []
+            },
+            {
+              "id": "customDriverOptions",
+              "label": "Custom driver options",
+              "kind": "custom",
+              "secretPurposes": [
+                "password",
+                "token",
+                "privateKey",
+                "privateKeyPassphrase"
+              ],
+              "fields": [
+                {
+                  "id": "options",
+                  "label": "Driver options",
+                  "type": "map",
+                  "profileField": "options"
+                }
+              ]
+            }
+          ],
+          "secretPurposes": [
+            "token",
+            "password",
+            "privateKey",
+            "privateKeyPassphrase"
+          ],
+          "tls": {
+            "supported": true,
+            "requiredByDefault": true,
+            "modes": [
+              "disable",
+              "prefer",
+              "require",
+              "verifyCa",
+              "verifyFull",
+              "clientCertificate"
+            ],
+            "fields": [
+              {
+                "id": "caCertificate",
+                "label": "CA certificate",
+                "type": "pem"
+              },
+              {
+                "id": "clientCertificate",
+                "label": "Client certificate",
+                "type": "pem"
+              },
+              {
+                "id": "clientPrivateKey",
+                "label": "Client private key",
+                "type": "pem",
+                "secretPurpose": "privateKey"
+              }
+            ]
+          },
+          "transports": [
+            "direct",
+            "sshTunnel",
+            "socks5Proxy",
+            "httpConnectProxy",
+            "proxyChain"
+          ],
+          "optionNamespaces": [
+            "profile.options",
+            "driver",
+            "tls",
+            "network",
+            "duckdb",
+            "motherduck"
+          ],
+          "customDriverOptions": true
+        }
+      }
+    ]
+  },
+  "capabilities": {
+    "nativeModules": [
+      {
+        "id": "motherduck.driver",
+        "path": "dist/native",
+        "platforms": [
+          "windowsX64",
+          "windowsArm64",
+          "macosX64",
+          "macosArm64",
+          "linuxX64",
+          "linuxArm64"
+        ]
+      }
+    ]
+  },
+  "dev": {
+    "watch": [
+      "src",
+      "connector.config.json",
+      "irodori.extension.json"
+    ]
+  }
+}

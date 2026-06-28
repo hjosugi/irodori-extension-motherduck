@@ -1,0 +1,21 @@
+[package]
+name = "irodori-extension-motherduck"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR 0BSD"
+description = "Irodori Table native connector extension."
+publish = false
+
+[lib]
+name = "irodori_extension_motherduck"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["bundled-duckdb"]
+bundled-duckdb = ["duckdb/bundled"]
+
+[dependencies]
+duckdb = { version = "1", default-features = false }
+serde_json = "1"
+
+
