@@ -54,7 +54,7 @@ Driver operations return structured connector errors for invalid requests, missi
 ## Development
 
 
-DuckDB-linked builds share `../target` across sibling extension repositories. The default `bundled-duckdb` feature builds a reproducible embedded DuckDB library; for faster local iteration with a system `libduckdb`, run `cargo test --no-default-features`.
+DuckDB-linked builds share `../target` across sibling extension repositories. Normal `make check` does not enable `bundled-duckdb`; run `make check-duckdb-bundled` only when a self-contained DuckDB binary is required, because it compiles libduckdb C++ and can consume significant CPU.
 
 
 ```sh

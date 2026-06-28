@@ -11,7 +11,7 @@ name = "irodori_extension_motherduck"
 crate-type = ["cdylib", "rlib"]
 
 [features]
-default = ["bundled-duckdb"]
+default = []
 bundled-duckdb = ["duckdb/bundled"]
 
 [dependencies]
@@ -19,3 +19,11 @@ duckdb = { version = "1", default-features = false }
 serde_json = "1"
 
 
+[profile.dev.package."*"]
+debug = 0
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = "symbols"
+panic = "abort"
