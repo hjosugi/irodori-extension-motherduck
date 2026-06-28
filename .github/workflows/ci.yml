@@ -16,5 +16,5 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo fmt --check
-      - run: cargo clippy --all-targets --features bundled-duckdb -- -D warnings
-      - run: cargo test --features bundled-duckdb
+      - run: DUCKDB_DOWNLOAD_LIB=1 cargo clippy --all-targets --no-default-features -- -D warnings
+      - run: DUCKDB_DOWNLOAD_LIB=1 cargo test --no-default-features

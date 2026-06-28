@@ -6,8 +6,10 @@ Source SHA-256: `c828ca26090f8699aa2a5e04cca0f328732469aa938b47ecd2bd198877c104c
 
 
 This directory is a migration staging area for `irodori.motherduck`. The active native
-ABI shim lives in `src/lib.rs`; engine-specific connect/query/metadata behavior
-should move here as the connector runtime contract is wired into the desktop app.
+entrypoints live in `src/lib.rs`, shared ABI helpers live in `src/abi.rs`, and
+engine behavior lives in `src/stub.rs` or `src/driver.rs`. Engine-specific
+connect/query/metadata code should move from these snapshots into that behavior
+module as the connector runtime contract is wired into the desktop app.
 
 ## Migration Snapshots
 

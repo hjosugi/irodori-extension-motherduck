@@ -16,7 +16,7 @@ This connector is listed in the public Irodori extension marketplace.
 A desktop adapter source snapshot is staged in `native/source/` from `db/duck.rs`.
 
 Connector metadata lives in `connector.config.json` and `irodori.extension.json`.
-The Rust code links a DuckDB-compatible driver and handles `connect`, `query`, `metadata`, and `close` through the native JSON ABI.
+The Rust code keeps native ABI exports in `src/lib.rs`, shared buffer/JSON helpers in `src/abi.rs`, and DuckDB-compatible connect/query/metadata behavior in `src/driver.rs`.
 
 ## Connection Metadata
 
@@ -54,7 +54,7 @@ Driver operations return structured connector errors for invalid requests, missi
 ## Development
 
 
-DuckDB-linked builds share `../target` across sibling extension repositories. Normal `make check` does not enable `bundled-duckdb`; run `make check-duckdb-bundled` only when a self-contained DuckDB binary is required, because it compiles libduckdb C++ and can consume significant CPU.
+DuckDB-linked builds share `../target` across sibling extension repositories. Normal `make check` and CI set `DUCKDB_DOWNLOAD_LIB=1` so libduckdb comes from the prebuilt upstream archive instead of a local C++ build. Run `make check-duckdb-bundled` only when a fully self-contained DuckDB build is required, because it compiles libduckdb C++ and can consume significant CPU.
 
 
 ```sh
