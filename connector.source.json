@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "extensionId": "irodori.motherduck",
+  "visibility": "public",
+  "version": "0.1.0",
+  "connector": {
+    "id": "motherduck.connector",
+    "engine": "motherduck",
+    "label": "MotherDuck",
+    "aliases": [
+      "motherduck",
+      "MotherDuck"
+    ],
+    "defaultPort": 443,
+    "wire": "duckdb",
+    "module": "motherduck.driver",
+    "features": [
+      "metadata",
+      "sql",
+      "streaming",
+      "explain"
+    ]
+  },
+  "connection": {
+    "endpoint": {
+      "modes": [
+        "motherduckService",
+        "localFile",
+        "inMemory",
+        "connectionString"
+      ],
+      "defaultPort": 443,
+      "fields": [
+        {
+          "id": "database",
+          "label": "MotherDuck database or DuckDB file",
+          "type": "string",
+          "profileField": "database"
+        },
+        {
+          "id": "host",
+          "label": "MotherDuck endpoint",
+          "type": "string",
+          "profileField": "host",
+          "default": "api.motherduck.com"
+        }
+      ]
+    },
+    "authMethods": [
+      "none",
+      "connectionString",
+      "motherduckToken",
+      "oauth2",
+      "browserSso",
+      "customDriverOptions"
+    ],
+    "tls": "required",
+    "transports": "default",
+    "optionNamespaces": [
+      "duckdb",
+      "motherduck"
+    ],
+    "customDriverOptions": true
+  },
+  "runtime": {
+    "driverLinked": true
+  },
+  "source": {
+    "knowledgeEngineStatus": "extension",
+    "adapter": "db/duck.rs"
+  }
+}
